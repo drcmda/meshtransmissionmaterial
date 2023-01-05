@@ -7,58 +7,8 @@ import * as React from 'react'
 import { extend, useThree, useFrame, ReactThreeFiber } from '@react-three/fiber'
 import { useFBO } from '@react-three/drei'
 
-type MeshTransmissionMaterialType = Omit<JSX.IntrinsicElements['meshPhysicalMaterial'], 'args' | 'transmission' | 'transmissionMap' | 'thickness'> & {
-  /** Refraction shift, default: 0 */
-  refraction?: number
-  /** Refraction color, default: black */
-  refractionColor?: ReactThreeFiber.Color
-  /** RGB color shift, default: 0.3 */
-  rgbShift?: number
-  /** Noise, default: 0.03 */
-  noise?: number
-  /** Color saturation, default: 1 */
-  saturation?: number
-  /** Color contrast, default: 1 */
-  contrast?: number
-  resolution?: ReactThreeFiber.Vector2
-  /** The scene rendered into a texture (use it to share a texture between materials), default: null  */
-  buffer?: THREE.Texture
-  args?: [{ samples: number }]
-}
-
-type MeshTransmissionMaterialProps = Omit<MeshTransmissionMaterialType, 'resolution' | 'args'> & {
-  /** Resolution of the local buffer, default: 1024 */
-  resolution?: number
-  /** Refraction samples, default: 10 */
-  samples?: number
-  /** Buffer scene background (can be a texture, a cubetexture or a color), default: null */
-  background?: THREE.Texture
-}
-
-interface Uniform<T> {
-  value: T
-}
-
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      meshTransmissionMaterial: MeshTransmissionMaterialType
-    }
-  }
-}
 
 class MeshTransmissionMaterialImpl extends THREE.MeshPhysicalMaterial {
-  uniforms: {
-    refraction: Uniform<number>
-    refractionColor: Uniform<THREE.Color>
-    buffer: Uniform<THREE.Texture | null>
-    rgbShift: Uniform<number>
-    noise: Uniform<number>
-    saturation: Uniform<number>
-    contrast: Uniform<number>
-    resolution: Uniform<THREE.Vector2>
-  }
-
   constructor({ samples = 5, ...args } = {}) {
     super(args)
 
@@ -132,10 +82,10 @@ class MeshTransmissionMaterialImpl extends THREE.MeshPhysicalMaterial {
 }
 
 export const MeshTransmissionMaterial = React.forwardRef(
-  ({ buffer, samples = 10, resolution = 1024, background, ...props }: MeshTransmissionMaterialProps, fref) => {
+  ({ buffer, samples = 10, resolution = 1024, background, ...props }, fref) => {
     extend({ MeshTransmissionMaterial: MeshTransmissionMaterialImpl })
 
-    const ref = React.useRef<JSX.IntrinsicElements['meshTransmissionMaterial']>(null!)
+    const ref = React.useRef(null)
     const { size, viewport } = useThree()
     const fbo = useFBO(resolution)
     const config = React.useMemo(() => ({ samples }), [samples])
@@ -145,7 +95,7 @@ export const MeshTransmissionMaterial = React.forwardRef(
     let parent
     useFrame((state) => {
       if (!buffer) {
-        parent = (ref.current as any).__r3f.parent as THREE.Object3D
+        parent = ref.current.__r3f.parent
         if (parent) {
           // Hide the outer groups contents
           oldVis = parent.visible
